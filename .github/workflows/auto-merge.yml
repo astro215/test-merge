@@ -6,7 +6,7 @@ on:
 
 jobs:
   automerge:
-    if: github.actor == 'astro215' && github.event.pull_request.head.ref == 'Br2' && github.event.pull_request.base.ref == 'Br1'
+    if: github.actor == 'astro215' && github.event.pull_request.head.ref == 'br2' && github.event.pull_request.base.ref == 'br1'
     runs-on: ubuntu-latest
 
     steps:
@@ -17,12 +17,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-      - name: Merge PR
+
+      - name: Fetch PR and merge
         run: |
-          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
-          git checkout -qf FETCH_HEAD
-          git merge --no-ff -m "Auto-merged by GitHub Actions" ${{ github.event.pull_request.head.sha }}
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
+          git checkout pr-branch
+          git pull origin Br1  # Pull the latest changes from Br1 (base branch)
+          git merge --no-ff -m "Auto-merged by GitHub Actions" pr-branch
+
       - name: Push changes
-        run: git push origin ${{ github.event.pull_request.base.ref }}
+        run: git push origin Br1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
