@@ -1,9 +1,10 @@
 name: Auto Merge Pull Request
 
+# Trigger the workflow on pull request creation, reopening, or when new commits are pushed to the pull request.
 on:
-  push:
+  pull_request:
     branches:
-      - br2 # Trigger this action on push to br2
+      - br1  # The target branch for the PR (base branch)
 
 jobs:
   merge:
@@ -13,30 +14,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: List open pull requests
+      - name: Check if PR is from br2
+        id: check-pr
         uses: actions/github-script@v6
-        id: list-prs
         with:
           github-token: ${{ secrets.GH_TOKEN }}
           script: |
-            const { data: pullRequests } = await github.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              head: `br2`,
-              base: `br1`,
-            });
-
-            if (pullRequests.length === 0) {
-              core.setOutput('found', 'false');
-              return;
+            // Check if the PR is from br2
+            if (context.payload.pull_request.head.ref === 'br2') {
+              core.setOutput('is_valid_pr', 'true');
+            } else {
+              core.setOutput('is_valid_pr', 'false');
             }
 
-            core.setOutput('found', 'true');
-            core.setOutput('pr_number', pullRequests[0].number);
-
-      - name: Auto merge PR if found
-        if: steps.list-prs.outputs.found == 'true'
+      - name: Auto merge PR
+        if: steps.check-pr.outputs.is_valid_pr == 'true'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GH_TOKEN }}
@@ -44,5 +36,5 @@ jobs:
             await github.pulls.merge({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: steps.list-prs.outputs.pr_number,
+              pull_number: context.payload.pull_request.number,
             });
