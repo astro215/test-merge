@@ -1,0 +1,48 @@
+name: Auto Merge Pull Request
+
+on:
+  push:
+    branches:
+      - br2 # Trigger this action on push to br2
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: List open pull requests
+        uses: actions/github-script@v6
+        id: list-prs
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
+          script: |
+            const { data: pullRequests } = await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `br2`,
+              base: `br1`,
+            });
+
+            if (pullRequests.length === 0) {
+              core.setOutput('found', 'false');
+              return;
+            }
+
+            core.setOutput('found', 'true');
+            core.setOutput('pr_number', pullRequests[0].number);
+
+      - name: Auto merge PR if found
+        if: steps.list-prs.outputs.found == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
+          script: |
+            await github.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: steps.list-prs.outputs.pr_number,
+            });
