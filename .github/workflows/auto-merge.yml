@@ -22,7 +22,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-branch
           git checkout pr-branch
-          git pull origin Br1  # Pull the latest changes from Br1 (base branch)
+          git pull origin Br1  # Pull the latest changes from br1 (base branch)
           git merge --no-ff -m "Auto-merged by GitHub Actions" pr-branch
 
       - name: Push changes
