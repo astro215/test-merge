@@ -1,40 +1,28 @@
-name: Auto Merge Pull Request
+name: Automerge PRs from PipedreamBot
 
-# Trigger the workflow on pull request creation, reopening, or when new commits are pushed to the pull request.
 on:
   pull_request:
-    branches:
-      - br1  # The target branch for the PR (base branch)
+    types: [opened, synchronize, reopened]
 
 jobs:
-  merge:
+  automerge:
+    if: github.actor == 'astro215' && github.event.pull_request.head.ref == 'Br2' && github.event.pull_request.base.ref == 'Br1'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      - name: Check if PR is from br2
-        id: check-pr
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GH_TOKEN }}
-          script: |
-            // Check if the PR is from br2
-            if (context.payload.pull_request.head.ref === 'br2') {
-              core.setOutput('is_valid_pr', 'true');
-            } else {
-              core.setOutput('is_valid_pr', 'false');
-            }
-
-      - name: Auto merge PR
-        if: steps.check-pr.outputs.is_valid_pr == 'true'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GH_TOKEN }}
-          script: |
-            await github.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-            });
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Merge PR
+        run: |
+          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
+          git checkout -qf FETCH_HEAD
+          git merge --no-ff -m "Auto-merged by GitHub Actions" ${{ github.event.pull_request.head.sha }}
+      - name: Push changes
+        run: git push origin ${{ github.event.pull_request.base.ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
